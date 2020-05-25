@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block body %}
+    <div class="container">
+        <h4>{{ name }}</h4>
+    </div>
+
+    <div id="message-list">
+
+    </div>
+
+    <div id="send-message">
+        <input type="text" id="message" placeholder="Type out your message!">
+        <input type="submit" value="Send" onclick="send_message()">
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.11/handlebars.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            get_messages()
+        });
+    </script>
+
+    <script id="message-template" type="text/x-handlebars-template">
+        <div class="card" style="width: 18rem;">
+            <div class="card-body">
+                {% raw -%}
+                <h5 class="card-title">{{ message }}</h5>
+                <p class="card-text">-{{ user }}, {{ timestamp }}</p>
+                {%- endraw %}
+            </div>
+        </div>
+    </script>
+
+    <script>
+        function get_messages() {
+            const url = '/channels/{{ name }}/messages/';
+            const request = new XMLHttpRequest();
+            request.open('GET', url, true);
+
+            request.onreadystatechange = function() { // Call a function when the state changes.
+                if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                    const messages = JSON.parse(request.responseText).messages;
+
+                    // Clear messages
+                    const node = document.getElementById('message-list');
+                    while(node.hasChildNodes()) {
+                        node.removeChild(node.lastChild);
+                    }
+
+                    for(let i = 0; i < messages.length; i++) {
+                        const template = Handlebars.compile(document.querySelector('#message-template').innerHTML);
+                        const date = new Date(messages[i].timestamp * 1000);
+                        const channel = template({"message": messages[i].content, "user": messages[i].user, "timestamp":format_date(date)});
+                        document.getElementById('message-list').innerHTML += channel;
+                    }
+                }
+            }
+            request.send();
+        }
+
+        function send_message() {
+            const url = '/channels/{{ name }}/messages/';
+            const request = new XMLHttpRequest();
+            request.open('POST', url, true);
+            request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+            request.onreadystatechange = function() { // Call a function when the state changes.
+                if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                    get_messages();
+                }
+            }
+            const message = document.getElementById("message").value;
+            const params = `message=${message}&user={{ user }}`;
+            request.send(params);
+        }
+
+        function format_date(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const hour = date.getHours();
+            const minute = date.getMinutes();
+
+            return `${hour}:${minute}, ${month}/${day}/${year}`
+        }
+
+        window.setInterval(get_messages, 1000);
+    </script>
+{% endblock %}

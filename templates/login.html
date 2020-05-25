@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block body %}
+    <div class="container">
+        <h2>Login</h2>
+        <h4>Enter your desired display name.</h4>
+        <form action="{{ url_for('login_user') }}" method="post">
+            <input type="text" name="user" placeholder="Display Name">
+            <button>Submit</button>
+        </form>
+    </div>
+{% endblock %}

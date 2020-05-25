@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block body %}
+    <div class="container">
+        <h1>Channels List</h1>
+
+        <div id="channels-list"></div>
+
+        <div id="create-channel">
+            <h5>Create Channel</h5>
+            <input type="text" id="channel-name" placeholder="Channel name">
+            <input type="submit" value="Submit" onclick="create_channel()">
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.11/handlebars.min.js"></script>
+
+        <script id="channel-card-template" type="text/x-handlebars-template">
+            <div class="card" style="width: 18rem;">
+                <div class="card-body">
+                    {% raw -%}
+                    <h5 class="card-title">{{ name }}</h5>
+                    <a href="/channels/{{ name }}"><button class="btn btn-primary">Go To Channel</button></a>
+                    {%- endraw %}
+                </div>
+            </div>
+        </script>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                get_channels();
+            });
+        </script>
+
+
+        <script>
+            function create_channel() {
+                const name = document.getElementById("channel-name").value;
+                const request = new XMLHttpRequest();
+                request.open('POST', '/create_channel/', true);
+                request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+                request.onreadystatechange = function() { // Call a function when the state changes.
+                    if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                        get_channels();
+                    }
+                }
+
+                const params = `name=${name}`;
+                request.send(params);
+            }
+
+            function get_channels() {
+                const request = new XMLHttpRequest();
+                request.open('GET', '/get_channels/', true);
+
+                request.onreadystatechange = function() { // Call a function when the state changes.
+                    if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                        const channels = JSON.parse(request.responseText).channels;
+
+                        // Clear channel list
+                        const node = document.getElementById('channels-list');
+                        while(node.hasChildNodes()) {
+                            node.removeChild(node.lastChild);
+                        }
+
+                        for(let i = 0; i < channels.length; i++) {
+                            // HTML template for card
+                            const template = Handlebars.compile(document.querySelector('#channel-card-template').innerHTML);
+                            const channel = template({"name": JSON.parse(channels[i]).name});
+                            document.getElementById('channels-list').innerHTML += channel;
+                        }
+                    }
+                }
+                request.send();
+            }
+
+        </script>
+    </div>
+{% endblock %}
