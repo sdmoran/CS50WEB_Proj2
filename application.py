@@ -16,6 +16,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 channels = []
+users = []
 
 @app.route("/")
 def login():
@@ -26,8 +27,12 @@ def login():
 
 @app.route("/login_user/", methods=["POST"])
 def login_user():
-    session["user"] = request.form.get("user")
-    return redirect(url_for("home"))
+    user = request.form.get("user")
+    if user not in users and len(user) > 0:
+        session["user"] = request.form.get("user")
+        return redirect(url_for("home"))
+    else:
+        return render_template("login.html", error=True)
     
 @app.route("/home/")
 def home():
@@ -54,7 +59,7 @@ def get_channels():
 @app.route("/create_channel/", methods=["POST"])
 def create_channel():
     name = request.form.get("name")
-    if name not in [ c.name for c in channels ]:
+    if name not in [ c.name for c in channels ] and len(name) > 0:
         newChannel = Channel(name)
         channels.append(newChannel)
         return "Did it!"

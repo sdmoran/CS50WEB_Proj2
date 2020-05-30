@@ -4,6 +4,9 @@
     <div class="container">
         <h2>Login</h2>
         <h4>Enter your desired display name.</h4>
+        {% if error %}
+            <h4 class="error">An error occured. Please try again.</h4>
+        {% endif %}
         <form action="{{ url_for('login_user') }}" method="post">
             <input type="text" name="user" placeholder="Display Name">
             <button>Submit</button>

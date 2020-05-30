@@ -6,7 +6,7 @@ class Channel:
     def __init__(self, name):
         self.name = name
         self.messages = []
-        self.add_message("FlackBot", "Welcome to your brand new channel!")
+        # self.add_message("FlackBot", "Welcome to your brand new channel!")
 
     def get_json(self):
         return json.dumps(

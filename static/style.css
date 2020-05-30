@@ -5,3 +5,7 @@
 .card {
     width: 18rem;
 }
+
+.error {
+    color: red;
+}

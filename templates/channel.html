@@ -10,7 +10,7 @@
     </div>
 
     <div id="send-message">
-        <input type="text" id="message" placeholder="Type out your message!">
+        <input type="text" id="message-field" placeholder="Type out your message!">
         <input type="submit" value="Send" onclick="send_message()">
     </div>
 
@@ -49,11 +49,17 @@
                         node.removeChild(node.lastChild);
                     }
 
-                    for(let i = 0; i < messages.length; i++) {
-                        const template = Handlebars.compile(document.querySelector('#message-template').innerHTML);
-                        const date = new Date(messages[i].timestamp * 1000);
-                        const channel = template({"message": messages[i].content, "user": messages[i].user, "timestamp":format_date(date)});
-                        document.getElementById('message-list').innerHTML += channel;
+                    if(messages.length == 0) {
+                        document.querySelector('#message-list').innerHTML = "There are no messages in this channel yet.";
+                    }
+
+                    else {
+                        for(let i = 0; i < messages.length; i++) {
+                            const template = Handlebars.compile(document.querySelector('#message-template').innerHTML);
+                            const date = new Date(messages[i].timestamp * 1000);
+                            const channel = template({"message": messages[i].content, "user": messages[i].user, "timestamp":format_date(date)});
+                            document.getElementById('message-list').innerHTML += channel;
+                        }
                     }
                 }
             }
@@ -68,10 +74,11 @@
 
             request.onreadystatechange = function() { // Call a function when the state changes.
                 if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                    document.getElementById("message-field").value = "";
                     get_messages();
                 }
             }
-            const message = document.getElementById("message").value;
+            const message = document.getElementById("message-field").value;
             const params = `message=${message}&user={{ user }}`;
             request.send(params);
         }
