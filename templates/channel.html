@@ -9,7 +9,7 @@
 
     </div>
 
-    <div id="send-message">
+    <div id="send-message" class="MOVEME">
         <input type="text" id="message-field" placeholder="Type out your message!">
         <input type="submit" value="Send" onclick="send_message()">
     </div>
@@ -88,10 +88,12 @@
             const month = date.getMonth() + 1;
             const day = date.getDate();
             const hour = date.getHours();
-            const minute = date.getMinutes();
+            var minute = date.getMinutes();
+            minute = ('00'+minute).slice(-2);
 
             return `${hour}:${minute}, ${month}/${day}/${year}`
         }
+
 
         window.setInterval(get_messages, 1000);
     </script>

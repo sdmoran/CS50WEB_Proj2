@@ -2,9 +2,11 @@
 
 {% block body %}
     <div class="container">
-        <h1>Channels List</h1>
+        <h4>Public Channels</h4>
+        <div id="public-channels-list"></div>
 
-        <div id="channels-list"></div>
+        <h4>Your Private Channels</h4>
+        <div id="private-channels-list"></div>
 
         <div id="error-container"></div>
 
@@ -12,6 +14,13 @@
             <h5>Create Channel</h5>
             <input type="text" id="channel-name" placeholder="Channel name">
             <input type="submit" value="Submit" onclick="create_channel()">
+            <div class="form-check">
+                <label class="form-label" for="privacy-selector">Channel Privacy</label>
+            <select class="form-control" id="privacy-selector" onchange="toggle_dropdown(this)">
+                <option>Public</option>
+                <option>Private</option>
+            </select>
+            </div>
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.11/handlebars.min.js"></script>
@@ -27,19 +36,32 @@
             </div>
         </script>
 
+        <script id="add-channel-users" type="text/x-handlebars-template">
+            <div class="card" style="width: 18rem;" id="list-users">
+                <div class="card-body">
+                    <p>Select users to add to this private channel</p>
+                    <ul id="possible_users"></ul>
+                </div>
+            </div>
+        </script>
+
+        <script id="user-line" type="text/x-handlebars-template">
+            {% raw -%}
+                <button type="button" class="btn btn-outline-primary private-channel-user" id="{{user}}" onclick="toggle_select_user('{{user}}')">{{ user }}</button>
+            {%- endraw %}
+        </script>
+
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 get_channels();
             });
         </script>
 
-
         <script>
             function create_channel() {
-                const name = document.getElementById("channel-name").value;
                 const request = new XMLHttpRequest();
                 request.open('POST', '/create_channel/', true);
-                request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                request.setRequestHeader("Content-Type", "application/json");
 
                 request.onreadystatechange = function() { // Call a function when the state changes.
                     if (this.readyState === XMLHttpRequest.DONE) {
@@ -63,36 +85,110 @@
                         }
                     }
                 }
+                const name = document.querySelector("#channel-name").value;
+                const private = document.querySelector("#privacy-selector").value == "Private";
+                let users = [];
+                users.push(window.localStorage.getItem('user'));
+                // Select names of all users whose buttons were pressed as users for this channel
+                document.querySelectorAll(".private-channel-user.btn-primary").forEach(function(elt) {
+                    users.push(elt.id);
+                });
 
-                const params = `name=${name}`;
-                request.send(params);
+                const params = {
+                    'name': name,
+                    'private': private,
+                    'users': users
+                };
+                request.send(JSON.stringify(params));
             }
 
             function get_channels() {
                 const request = new XMLHttpRequest();
-                request.open('GET', '/get_channels/', true);
-
+                const params = `user=${window.localStorage.getItem('user')}`;
+                request.open('GET', '/get_channels/' + '?' + params, true);
+                console.log("USER: ", window.localStorage.getItem('user'));
                 request.onreadystatechange = function() { // Call a function when the state changes.
                     if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
-                        const channels = JSON.parse(request.responseText).channels;
-
-                        // Clear channel list
-                        const node = document.getElementById('channels-list');
-                        while(node.hasChildNodes()) {
-                            node.removeChild(node.lastChild);
-                        }
-
-                        for(let i = 0; i < channels.length; i++) {
-                            // HTML template for card
-                            const template = Handlebars.compile(document.querySelector('#channel-card-template').innerHTML);
-                            const channel = template({"name": JSON.parse(channels[i]).name});
-                            document.getElementById('channels-list').innerHTML += channel;
-                        }
+                        refresh_list('public-channels-list', JSON.parse(request.responseText).public)
+                        refresh_list('private-channels-list', JSON.parse(request.responseText).private)
                     }
                 }
+
                 request.send();
             }
 
+            function get_users() {
+                return new Promise(resolve => {
+                    const request = new XMLHttpRequest();
+                    request.open('GET', '/get_users/', true);
+
+                    request.onreadystatechange = function() { // Call a function when the state changes.
+                        if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                            resolve(JSON.parse(request.responseText).users);
+                        }
+                    }
+                    request.send();
+                });
+            }
+
+            function refresh_list(channel_elt_name, channels) {
+                // Clear channel list
+                const node = document.getElementById(channel_elt_name);
+                while(node.hasChildNodes()) {
+                    node.removeChild(node.lastChild);
+                }
+
+                // Parse public channels
+                for(let i = 0; i < channels.length; i++) {
+                    // HTML template for card
+                    const template = Handlebars.compile(document.querySelector('#channel-card-template').innerHTML);
+                    const channel = template({'name': JSON.parse(channels[i]).name});
+                    node.innerHTML += channel;
+                }
+            }
+
+            // Show/hide dropdown for adding users to private channel
+            async function toggle_dropdown(elt) {
+                if(elt.value == "Public") {
+                    // Hide everything
+                    document.querySelector("#add-channel-users-container").remove();
+                }
+                else {  // Show
+                    if(document.querySelector("#list-users")) {
+                        return;
+                    }
+                    const parent = document.querySelector("#create-channel");
+                    const node = document.createElement("div");
+                    node.id = "add-channel-users-container";
+                    parent.appendChild(node);
+                    const template = Handlebars.compile(document.querySelector('#add-channel-users').innerHTML);
+                    node.innerHTML += template();
+                    
+                    // Don't want to display current user as part of this list;
+                    // creator should always be included in private channel
+                    const users = await get_users();
+                    const user_list = document.querySelector("#possible_users");
+                    for(let i = 0; i < users.length; i++) {
+                        if(users[i] != window.localStorage.getItem('user')) {
+                            const user_line = Handlebars.compile(document.querySelector('#user-line').innerHTML);
+                            user_list.innerHTML += user_line({'user': users[i]});
+                        }
+                    }
+                }
+            }
+
+            function toggle_select_user(user) {
+                const node = document.getElementById(user);
+                const classes = node.classList;
+                if(classes.value.includes('btn-outline-primary')) {
+                    classes.remove('btn-outline-primary');
+                    classes.add('btn-primary')
+                }
+                else {
+                    classes.remove('btn-primary');
+                    classes.add('btn-outline-primary')
+                }
+            }
         </script>
     </div>
 {% endblock %}

@@ -3,7 +3,7 @@ import json
 from flask import Flask, session, render_template, request, redirect, url_for
 from flask_session import Session
 from flask_socketio import SocketIO, emit
-from channel import Channel
+from channel import Channel, PrivateChannel
 
 app = Flask(__name__)
 
@@ -29,7 +29,8 @@ def login():
 def login_user():
     user = request.form.get("user")
     if user not in users and len(user) > 0:
-        session["user"] = request.form.get("user")
+        session["user"] = user
+        users.append(user)
         return redirect(url_for("home"))
     else:
         return render_template("login.html", error=True)
@@ -50,18 +51,34 @@ def logout():
 
 @app.route("/channels/")
 def channel_list():
-    return render_template("channel_list.html", channels=channels)
+    return render_template("channel_list.html")
 
 @app.route("/get_channels/")
 def get_channels():
-    return {"channels": [c.get_json() for c in channels]}
+    user = request.args.get("user")
+    public_channels = [c.get_json() for c in channels if not c.private]
+    private_channels = [c.get_json() for c in channels if c.private and user in c.users]
+    return {"public": public_channels, "private": private_channels}
+
+@app.route("/get_users/")
+def get_users():
+    return json.dumps({"users": users})
 
 @app.route("/create_channel/", methods=["POST"])
 def create_channel():
-    name = request.form.get("name")
+    print("REQUEST:", request.json)
+    params = request.json
+    name = params['name']
+    private = params['private']
     if name not in [ c.name for c in channels ] and len(name) > 0:
-        newChannel = Channel(name)
-        channels.append(newChannel)
+        if private:
+            users = params['users']
+            newChannel = PrivateChannel(name, users)
+            print("Users: ", newChannel.users)
+            channels.append(newChannel)
+        else:
+            newChannel = Channel(name)
+            channels.append(newChannel)
         return "Did it!"
     else:
          return ("Couldn't do it!", 406)

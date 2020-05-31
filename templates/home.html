@@ -4,4 +4,9 @@
 <div class="container">
     <h1>Welcome {{ user }}!</h1>
 </div>
+
+<script>
+    storage = window.localStorage;
+    storage.setItem('user', '{{user}}')
+</script>
 {% endblock %}
