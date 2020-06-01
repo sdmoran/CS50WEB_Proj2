@@ -3,15 +3,24 @@
 {% block body %}
     <div class="container">
         <h4>{{ name }}</h4>
-    </div>
 
-    <div id="message-list">
+        {% if userlist %}
+        <div id="users-list">
+            Users with access to this channel:
+            <ul>
+                {% for u in userlist %}
+                <li>{{ u }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
 
-    </div>
+        <div id="message-list"></div>
 
-    <div id="send-message" class="MOVEME">
-        <input type="text" id="message-field" placeholder="Type out your message!">
-        <input type="submit" value="Send" onclick="send_message()">
+        <div id="send-message">
+            <input type="text" id="message-field" placeholder="Type out your message!">
+            <input type="submit" value="Send" onclick="send_message()">
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.11/handlebars.min.js"></script>
@@ -93,7 +102,6 @@
 
             return `${hour}:${minute}, ${month}/${day}/${year}`
         }
-
 
         window.setInterval(get_messages, 1000);
     </script>

@@ -40,7 +40,10 @@ def home():
     if "user" not in session.keys():
         return redirect(url_for("login"))
     elif "recent" in session.keys():
-        return redirect(url_for("channel", name=session["recent"]))
+        if session["recent"] in channels:
+            return redirect(url_for("channel", name=session["recent"]))
+        else:
+            return render_template("home.html", user=session["user"])
     else:
         return render_template("home.html", user=session["user"])
 
@@ -66,7 +69,6 @@ def get_users():
 
 @app.route("/create_channel/", methods=["POST"])
 def create_channel():
-    print("REQUEST:", request.json)
     params = request.json
     name = params['name']
     private = params['private']
@@ -74,7 +76,6 @@ def create_channel():
         if private:
             users = params['users']
             newChannel = PrivateChannel(name, users)
-            print("Users: ", newChannel.users)
             channels.append(newChannel)
         else:
             newChannel = Channel(name)
@@ -88,7 +89,14 @@ def channel(name):
     if 'user' not in session.keys():
         return "MUST BE LOGGED IN!"
     session["recent"] = name
-    return render_template("channel.html", name=name, user=session['user'])
+
+    users = []
+    for channel in channels:
+        if channel.name == name and channel.private:
+            users = channel.users
+            break
+
+    return render_template("channel.html", name=name, user=session['user'], userlist=users)
 
 @app.route("/channels/<name>/messages/", methods=["GET", "POST"])
 def messages(name):
@@ -103,3 +111,7 @@ def messages(name):
                 return "Added message!"
     return ("Channel not found!", 404)
 
+@app.route("/reset/")
+def reset():
+    session.pop('user', None)
+    return redirect(url_for('home'))
