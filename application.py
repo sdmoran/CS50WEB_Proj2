@@ -1,5 +1,6 @@
 import os
 import json
+import urllib
 from flask import Flask, session, render_template, request, redirect, url_for
 from flask_session import Session
 from flask_socketio import SocketIO, emit
@@ -22,6 +23,11 @@ users = []
 def login():
     if "user" not in session.keys():
         return render_template("login.html")
+    elif "recent" in session.keys():
+        if session["recent"] in [c.name for c in channels]:
+            return redirect(url_for("channel", name=session["recent"]))
+        else:
+            return render_template("home.html", user=session["user"])
     else:
         return redirect(url_for("home"))
 
@@ -40,7 +46,7 @@ def home():
     if "user" not in session.keys():
         return redirect(url_for("login"))
     elif "recent" in session.keys():
-        if session["recent"] in channels:
+        if session["recent"] in [c.name for c in channels]:
             return redirect(url_for("channel", name=session["recent"]))
         else:
             return render_template("home.html", user=session["user"])
@@ -96,7 +102,7 @@ def channel(name):
             users = channel.users
             break
 
-    return render_template("channel.html", name=name, user=session['user'], userlist=users)
+    return render_template("channel.html", name=urllib.parse.unquote_plus(name), user=session['user'], userlist=users)
 
 @app.route("/channels/<name>/messages/", methods=["GET", "POST"])
 def messages(name):
@@ -105,12 +111,14 @@ def messages(name):
             if request.method == "GET":
                 return c.get_json()
             else: # POST
-                message = request.form.get("message")
-                user = request.form.get("user")
+                params = request.json
+                message = urllib.parse.unquote_plus(params.get("message"))
+                user = params.get("user")
                 c.add_message(user, message)
                 return "Added message!"
     return ("Channel not found!", 404)
 
+# For debugging purposes, just makes it easier to reset client side user
 @app.route("/reset/")
 def reset():
     session.pop('user', None)
